@@ -1,0 +1,17 @@
+oap-sdk/
+dist/
+preview/
+*.mgu
+*.tgz
+__pycache__/
+*.pyc
+node_modules/
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+*.pcap
+*.pcapng
+*.log
+.vscode/
