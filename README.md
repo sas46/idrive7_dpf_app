@@ -12,7 +12,7 @@ A standalone app for monitoring DPF conditions directly on the iDrive display. D
 - Live Data with recent trends and optional raw diagnostic replies.
 - Regeneration history and demo mode.
 - GPU rendering through the iDrive 7 Kit.
-- Optional experimental Regeneration page, disabled by default. Its action button is a non-functional placeholder; no regeneration request is sent.
+- Optional experimental Regeneration page, disabled by default. Its action button is a non-functional placeholder a the moment; no regeneration request is sent.
 
 ## Screenshots
 
