@@ -575,9 +575,9 @@ def build_start_widget(spec, app_id, icon_src, out, pkg_out=None):
     return {'component': comp, 'layout': ui['containers']['500']['components'][str(WIDGET_COMPONENT_ID)]['cells']['Widget']['value']}
 
 
-def build(app_id, language='en', preview_only=False):
+def build(app_id, language='en', preview_only=False, no_sdk=False):
     language = normalize_language(language)
-    if not preview_only and not all(os.path.isfile(os.path.join(SDK, name)) for name in ('index.js', 'package.json')):
+    if not preview_only and not no_sdk and not all(os.path.isfile(os.path.join(SDK, name)) for name in ('index.js', 'package.json')):
         raise SystemExit('BMW oap-sdk is missing. Extract it from your own head unit with kit/tools/extract_sdk.js, '
                          'or use --preview-only for an offline preview (no installable package).')
     adir = os.path.join(APPS, app_id)
@@ -592,7 +592,8 @@ def build(app_id, language='en', preview_only=False):
     src = os.path.join(stage, 'source')
     os.makedirs(os.path.join(src, 'javascript', 'kit'))
     os.makedirs(os.path.join(src, 'config'))
-    os.makedirs(os.path.join(src, 'node_modules', 'oap-sdk'))
+    if not no_sdk and not preview_only:
+        os.makedirs(os.path.join(src, 'node_modules', 'oap-sdk'))
 
     manifest = manifest_for(json.loads(json.dumps(spec)))
     missing = fit_to_unit(manifest, spec)
@@ -715,8 +716,9 @@ def build(app_id, language='en', preview_only=False):
     if preview_only:
         print('%s %s: offline preview in %s (NO SDK, NOT INSTALLABLE)' % (app_id, ver, stage))
         return
-    shutil.copy(os.path.join(SDK, 'index.js'), os.path.join(src, 'node_modules', 'oap-sdk', 'index.js'))
-    shutil.copy(os.path.join(SDK, 'package.json'), os.path.join(src, 'node_modules', 'oap-sdk', 'package.json'))
+    if not no_sdk:
+        shutil.copy(os.path.join(SDK, 'index.js'), os.path.join(src, 'node_modules', 'oap-sdk', 'index.js'))
+        shutil.copy(os.path.join(SDK, 'package.json'), os.path.join(src, 'node_modules', 'oap-sdk', 'package.json'))
 
     # --- rhmiData: package format (inside source/) and installed format ---
     icon = spec['id'] + '_icon.png'
@@ -787,14 +789,19 @@ def build(app_id, language='en', preview_only=False):
     # --- archives ---
     os.makedirs(DIST, exist_ok=True)
     bundle = os.path.join(DIST, f'{app_id}@{ver}.mgu')
-    with gz_header_free(bundle) as gz, tarfile.open(fileobj=gz, mode='w') as tf:
-        for n in ('meta.json', 'source', 'rhmiData', 'rhmiDataStartWidget', 'oapgen'):
-            if os.path.exists(os.path.join(stage, n)):
-                tf.add(os.path.join(stage, n), arcname=n)
+    if no_sdk:
+        if os.path.exists(bundle):
+            os.remove(bundle)
+    else:
+        with gz_header_free(bundle) as gz, tarfile.open(fileobj=gz, mode='w') as tf:
+            for n in ('meta.json', 'source', 'rhmiData', 'rhmiDataStartWidget', 'oapgen'):
+                if os.path.exists(os.path.join(stage, n)):
+                    tf.add(os.path.join(stage, n), arcname=n)
     npm = os.path.join(DIST, f'{app_id}@{ver}.tgz')
     with gz_header_free(npm) as gz, tarfile.open(fileobj=gz, mode='w') as tf:
         tf.add(src, arcname='package')
-    print(f'{app_id} {ver}: {os.path.relpath(bundle, ROOT)} ({os.path.getsize(bundle) // 1024} KiB), '
+    artifact = npm if no_sdk else bundle
+    print(f'{app_id} {ver}: {os.path.relpath(artifact, ROOT)} ({os.path.getsize(artifact) // 1024} KiB), '
           f'{len(uidesc["containers"])} screens, states {state_ids}')
 
 
@@ -810,12 +817,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--language', type=normalize_language, choices=languages(), default='en',
                         help='UI language; Korean also accepts ko-KR, ko-kr and ko_KR')
-    parser.add_argument('--preview-only', action='store_true', help='stage an offline preview without BMW SDK or installable archives')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--no-sdk', action='store_true', help='build TGZ for MGU Deploy local SDK linking; no MGU bundle')
+    modes.add_argument('--preview-only', action='store_true', help='stage an offline preview without BMW SDK or installable archives')
     parser.add_argument('apps', nargs='*')
     args = parser.parse_args()
     ids = args.apps or sorted(d for d in os.listdir(APPS) if os.path.exists(os.path.join(APPS, d, 'app.json')))
     for i in ids:
-        build(i, args.language, preview_only=args.preview_only)
+        build(i, args.language, preview_only=args.preview_only, no_sdk=args.no_sdk)
 
 
 if __name__ == '__main__':

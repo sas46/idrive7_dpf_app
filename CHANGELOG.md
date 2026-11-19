@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+- Added SDK-free TGZ packaging for MGU Deploy local SDK linking.
+- Added automated GitHub Release packaging.
+- No changes to diagnostics or UI.
+
 ## 0.1.5
 - Fixed the default screen layout on fresh installations: Full screen instead of iDrive.
 - Existing saved layout preferences are preserved.
