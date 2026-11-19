@@ -4,7 +4,7 @@
 
 **Version 0.1.4 — read-only diesel particulate filter monitoring for BMW MGU (ID7).**
 
-A standalone app for monitoring DPF conditions directly on the iDrive display. Developed and tested on a BMW X5 G05 25d; other vehicles and DDE variants have not been validated.
+A standalone app for monitoring DPF conditions directly on the iDrive display. Developed and tested on a BMW X5 G05 25d; other vehicles and DDE variants have not been validated. Feel free to open an issue to fix eventual issues.
 
 ## Features
 
@@ -12,7 +12,7 @@ A standalone app for monitoring DPF conditions directly on the iDrive display. D
 - Live Data with recent trends and optional raw diagnostic replies.
 - Regeneration history and demo mode.
 - GPU rendering through the iDrive 7 Kit.
-- Optional experimental Regeneration page, disabled by default. Its action button is a non-functional placeholder; no regeneration request is sent.
+- Optional experimental Regeneration page, disabled by default. Its action button is a non-functional placeholder a the moment; no regeneration request is sent.
 
 ## Installation
 
