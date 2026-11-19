@@ -1,11 +1,8 @@
-# DPF Monitor v0.1.4 — Initial public release
+# DPF Monitor v0.1.5 — Full screen by default
 
-Read-only DPF monitoring for BMW iDrive 7.
+## Fixed
 
-- Live soot load, differential pressure and exhaust temperatures.
-- Regeneration status and history, demo mode and optional raw diagnostic replies.
-- GPU rendering and automatic refresh.
-- Updated DPF/HUD icon.
-- Optional experimental regeneration information page, disabled by default. No regeneration commands are sent.
+- Fresh installations now default to Full screen instead of iDrive layout.
+- The iDrive layout remains available in Settings > Screen layout. Existing saved preferences are preserved.
 
-Tested on BMW X5 G05 25d. Other DDE variants are not validated. See README for installation, limitations and credits. Online MGU Store installation is not yet verified. BMW OAP SDK and compiled packages are not distributed.
+No changes to diagnostic functionality. The app remains read-only; no regeneration commands are sent.

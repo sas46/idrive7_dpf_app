@@ -2,7 +2,7 @@
 /**
  * Particulate filter - the DPF Monitor (apps/dpf) in the look of BMW's own iDrive 7 screens.
  *
- * The HMI draws the title and the button bar itself (setting "Screen layout" = iDrive, the default);
+ * The HMI draws the title and the button bar itself (setting "Screen layout" = iDrive, optional);
  * the app draws only the page between them, in BMW's style: black, thin lines, light type, the
  * slanted silver bars with the accent needle, and a drawing of the filter on the right.
  *

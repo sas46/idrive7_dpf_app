@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+- Fixed the default screen layout on fresh installations: Full screen instead of iDrive.
+- Existing saved layout preferences are preserved.
+
 ## 0.1.4
 - Replaced the application icon with the selected DPF/HUD artwork.
 

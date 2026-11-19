@@ -2,7 +2,7 @@
 
 ![DPF Monitor](apps/idrive7_dpf_app/icon.png)
 
-**Version 0.1.4 — read-only diesel particulate filter monitoring for BMW MGU (ID7).**
+**Read-only diesel particulate filter monitoring app for BMW MGU (ID7).**
 
 A standalone app for monitoring DPF conditions directly on the iDrive display. Developed and tested on a BMW X5 G05 25d; other vehicles and DDE variants have not been validated. Feel free to open an issue to fix eventual issues.
 
