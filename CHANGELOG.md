@@ -1,3 +1,10 @@
+## v0.1.8
+
+- Wait for Cluster Render handshake before creating the overlay.
+- Log layer creation, pixel submission, refusal and layer state.
+- Test the actual client over a simulated Unix socket.
+- In-car validation pending.
+
 # Changelog
 ## 0.1.7
 - Optional cluster notifications (enabled by default), persistent bar or compact icon, 70% black background. Requires Cluster Render 0.6.9. In-car validation pending.

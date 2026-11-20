@@ -2,7 +2,7 @@
   "id": "idrive7_dpf_app",
   "title": "DPF Monitor",
   "description": "Read-only diesel particulate filter monitor for BMW iDrive 7",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "vendor": "sas46",
   "loggingId": "DPF1",
   "iconGlyph": "DPF",

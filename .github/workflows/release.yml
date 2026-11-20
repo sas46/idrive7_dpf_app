@@ -31,6 +31,7 @@ jobs:
           mkdir -p /tmp/dpf-release-test
           tar -xzf "dist/idrive7_dpf_app@$VERSION.tgz" -C /tmp/dpf-release-test
           node tests/cluster.test.js /tmp/dpf-release-test/package/javascript
+          node tests/cluster-socket.test.js /tmp/dpf-release-test/package/javascript
       - name: Attach verified TGZ
         env:
           GH_TOKEN: ${{ github.token }}

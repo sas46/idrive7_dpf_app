@@ -29,10 +29,33 @@ function frame(state, compact, test) {
 class Notifications {
     constructor(settings,log,clock, factory) {
         this.s=settings; this.log=log; this.now=clock; this.factory=factory||(()=>new ClusterRender('sas46_dpf_monitor'));
-        this.state=null; this.since=0; this.doneUntil=0; this.testUntil=0; this.ref=0; this.key=''; this.cr=null;
+        this.state=null; this.since=0; this.doneUntil=0; this.testUntil=0; this.ref=0; this.key=''; this.cr=null; this.layerStatus='Idle'; this.desired=null; this.failedKey='';
     }
-    status() { return this.cr && this.cr.ready ? 'Connected' : fs.existsSync(DEFAULT_PATH) ? 'Not connected' : 'Renderer socket unavailable'; }
-    close() { if(this.cr) this.cr.close(); this.cr=null; this.ref=0; this.key=''; }
+    status() { return this.cr ? this.layerStatus : fs.existsSync(DEFAULT_PATH) ? 'Idle (no active notification)' : 'Renderer socket unavailable'; }
+    report(msg, error) { const fn=error?this.log.warn:this.log.info; if(fn) fn.call(this.log,'cluster: '+msg); }
+    close() { const cr=this.cr; this.cr=null; this.desired=null; if(cr) cr.close(); this.ref=0; this.key=''; this.failedKey=''; this.layerStatus='Idle'; }
+    open() {
+        const cr=this.cr=this.factory(); this.layerStatus='Connecting';
+        cr.on('ready',()=>{ if(this.cr!==cr) return; this.report('renderer ready'); this.layerStatus='Connected'; this.key=''; this.failedKey=''; this.flush(); });
+        cr.on('disconnected',()=>{ if(this.cr!==cr) return; this.layerStatus='Disconnected'; this.report('disconnected'); });
+        cr.on('layer',(ref,state,reason)=>{ if(this.cr!==cr || ref!==this.ref) return; this.layerStatus='Overlay '+state; this.report('layer '+ref+' '+state+' '+(reason||''),state==='error'); });
+        cr.on('refused',(op,ref,reason,line)=>{ if(this.cr!==cr) return; this.layerStatus='Overlay refused: '+reason; this.failedKey=this.desired?this.desired.key:''; this.report('refused '+op+' ref='+ref+' '+reason+' '+(line||''),true); });
+        cr.connect();
+    }
+    flush() {
+        const cr=this.cr,d=this.desired;
+        if(!cr || !cr.ready || !d || d.key===this.key || d.key===this.failedKey) return;
+        try {
+            const w=d.compact?80:400,h=d.compact?80:90;
+            const rgba=frame(d.show,d.compact,d.test);
+            if(this.ref) cr.drop(this.ref);
+            this.ref=0; this.layerStatus='Creating overlay';
+            this.ref=cr.image({target:'panel',klass:'overlay',z:Z,exclusive:false,x:(1920-w)/2,y:520+(90-h)/2,w,h,iw:w,ih:h,visible:true});
+            this.report('image ref='+this.ref+' '+w+'x'+h+' '+d.key);
+            if(!this.ref || !cr.pixels(this.ref,null,rgba)) throw new Error('image or pixels rejected locally');
+            this.key=d.key; this.layerStatus='Overlay submitted'; this.report('pixels queued '+rgba.length+' bytes ref='+this.ref);
+        } catch(e) { this.failedKey=d.key; this.layerStatus='Overlay error: '+e.message; this.report(String(e.stack||e),true); if(this.ref) cr.drop(this.ref); this.ref=0; }
+    }
     duration() { return (Number(this.s.get('clusterDuration'))||5)*1000; }
     complete() { if(this.s.get('clusterEnabled') && this.s.get('clusterCompleted')) this.doneUntil=this.now()+this.duration(); }
     test() { this.testUntil=this.now()+this.duration(); }
@@ -51,13 +74,10 @@ class Notifications {
         if(!test && state && mode==='temporary' && elapsed) show=null;
         const compact=!!(!test && state && show && mode==='icon' && elapsed);
         if(!show) { this.close(); return; }
-        if(!this.cr) { this.cr=this.factory(); this.cr.on('layer',(ref,state,reason)=>{if(state==='error') this.log.warn('cluster: '+reason);}); this.cr.connect(); }
         const key=show+':'+compact+':'+test;
-        if(key===this.key) return;
-        if(this.ref) this.cr.drop(this.ref);
-        const w=compact?80:400,h=compact?80:90;
-        this.ref=this.cr.image({target:'panel',klass:'overlay',z:Z,exclusive:false,x:(1920-w)/2,y:520+(90-h)/2,w,h,iw:w,ih:h,visible:true});
-        if(this.ref && this.cr.pixels(this.ref,null,frame(show,compact,test))) this.key=key;
+        this.desired={key,show,compact,test};
+        if(!this.cr) this.open();
+        this.flush();
     }
 }
 module.exports={Notifications,frame,Z};

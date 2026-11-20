@@ -3,7 +3,7 @@
 const assert=require('assert'), E=require('events'), path=require('path');
 const {Notifications,frame}=require(path.resolve(process.argv[2], 'cluster_notifications.js'));
 let now=100, opts={clusterEnabled:true,clusterRequested:true,clusterRunning:true,clusterCompleted:true,clusterDuration:5,clusterMode:'icon'}, last;
-class Mock extends E {connect(){} close(){} drop(){} image(o){last=o;return 1;} pixels(r,d,p){assert.equal(p.length,last.w*last.h*4);return true;}}
+class Mock extends E {connect(){this.ready=true;this.emit("ready");} close(){} drop(){} image(o){last=o;return 1;} pixels(r,d,p){assert.equal(p.length,last.w*last.h*4);return true;}}
 const n=new Notifications({get:k=>opts[k]},console,()=>now,()=>new Mock());
 n.update(6,true,false);assert.equal(last.w,400);assert.equal(last.exclusive,false);
 now+=5001;n.update(6,true,false);assert.equal(last.w,80);
