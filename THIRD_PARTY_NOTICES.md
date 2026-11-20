@@ -19,3 +19,5 @@ See kit/LICENSE for MIT copyright and permission notices.
 Rendering ecosystem: Robert Nisipeanu and IterioDev (upstream integration).
 Font licenses: kit/runtime/fonts/OFL-Barlow.txt and OFL-NotoSansSC.txt.
 DPF Monitor maintenance: sas46.
+
+Cluster Render JavaScript client (unmodified), Copyright (C) 2026 Robert Nisipeanu, MPL-2.0. Source and license are included in apps/idrive7_dpf_app/cluster_render_client.js and apps/idrive7_dpf_app/LICENSE. The MIT license applies to our original code, not the MPL-covered client.

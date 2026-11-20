@@ -1,4 +1,7 @@
 # Changelog
+## 0.1.7
+- Optional cluster notifications (enabled by default), persistent bar or compact icon, 70% black background. Requires Cluster Render 0.6.9. In-car validation pending.
+
 
 ## 0.1.6
 - Added SDK-free TGZ packaging for MGU Deploy local SDK linking.

@@ -9,4 +9,4 @@ if not exist "oap-sdk\index.js" (
 python kit\tools\build.py idrive7_dpf_app
 if errorlevel 1 exit /b %errorlevel%
 echo.
-echo Build completed: dist\idrive7_dpf_app@0.1.6.mgu
+echo Build completed: dist\idrive7_dpf_app@0.1.7.mgu

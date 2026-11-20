@@ -2,7 +2,7 @@
   "id": "idrive7_dpf_app",
   "title": "DPF Monitor",
   "description": "Read-only diesel particulate filter monitor for BMW iDrive 7",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "vendor": "sas46",
   "loggingId": "DPF1",
   "iconGlyph": "DPF",
@@ -18,6 +18,9 @@
     },
     "de.bmw.infotainment.vehicle.CDS": {
       "statusEngineTemperature": "rs"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
     }
   },
   "screens": [
@@ -180,6 +183,76 @@
       "key": "experimentalRegen",
       "label": "Enable regeneration page",
       "group": "Experimental",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "clusterEnabled",
+      "label": "Enable cluster notifications (requires Cluster Render)",
+      "group": "Instrument cluster (requires Cluster Render)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "clusterRequested",
+      "label": "Regeneration requested",
+      "group": "Instrument cluster (requires Cluster Render)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "clusterRunning",
+      "label": "Regeneration in progress",
+      "group": "Instrument cluster (requires Cluster Render)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "clusterCompleted",
+      "label": "Regeneration completed",
+      "group": "Instrument cluster (requires Cluster Render)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "clusterMode",
+      "label": "Notification display mode",
+      "group": "Instrument cluster (requires Cluster Render)",
+      "type": "choice",
+      "default": "bar",
+      "options": [
+        [
+          "bar",
+          "Persistent notification bar"
+        ],
+        [
+          "icon",
+          "Temporary bar + persistent icon"
+        ],
+        [
+          "temporary",
+          "Temporary notification only"
+        ]
+      ]
+    },
+    {
+      "key": "clusterDuration",
+      "label": "Notification duration",
+      "group": "Instrument cluster (requires Cluster Render)",
+      "type": "number",
+      "unit": "s",
+      "default": 5,
+      "steps": [
+        3,
+        5,
+        10,
+        15
+      ]
+    },
+    {
+      "key": "clusterTest",
+      "label": "Test cluster notification (stationary only)",
+      "group": "Instrument cluster (requires Cluster Render)",
       "type": "bool",
       "default": false
     }

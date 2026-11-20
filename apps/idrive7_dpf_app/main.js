@@ -24,6 +24,7 @@ const { ReadOnlyDiag } = require('./kit/readonly-diag');
 const { DidReader } = require('./kit/dids');
 const { DemoDpf } = require('./demo');
 const ID7 = require('./id7');
+const { Notifications } = require('./cluster_notifications');
 const { drawDpf } = require('./illustration');
 
 const W = 1600, H = 520;
@@ -50,6 +51,18 @@ mgu.run({
         const cfg = Object.assign({ ecu: 18, history: [] }, (ctx.spec.config && ctx.spec.config.dpf) || {});
         const mono = () => { const h = process.hrtime(); return h[0] * 1000 + h[1] / 1e6; };   // steady clock (the wall clock jumps at start-up)
         const t0 = mono();
+        const cluster = new Notifications(settings, log, mono);
+        let speed = null, speedAt = -Infinity;
+        ctx.signals.watch('de.bmw.infotainment.vehicle.Vehicle2', '1', {statusCarSpeed2: v => {
+            const n = v && v.speedVehicleCentreOfGravity;
+            speed = Number.isFinite(n) && n >= 0 && n < 65535 ? n * 0.015625 : null;
+            speedAt = mono();
+        }}, log, {pollMs:2000}).catch(e=>log.warn('cluster speed: '+e));
+        const stationary = () => speed === 0 && mono()-speedAt < 5000;
+        ctx.settingsRow({label:'Cluster Render status',value:()=>cluster.status()});
+        settings.onChange((k,v) => { if(k==='clusterTest' && v) { settings.set(k,false); if(stationary()) cluster.test(); } });
+        if(settings.get('clusterTest')) settings.set('clusterTest',false);
+        process.on('exit',()=>cluster.close());
         ctx.signals.watch('de.bmw.infotainment.vehicle.CDS', '1', {statusEngineTemperature: (v) => {
             const raw = v.temperatureEngineDrive;
             coolant = Number.isFinite(raw) && raw >= 0 && raw < 255 ? raw - 48 : null;
@@ -160,6 +173,7 @@ mgu.run({
             };
             log.info('regeneration ' + how + ': ' + JSON.stringify(entry));
             if (r.demo) return;
+            if (how === 'completed' && at.distSince && at.distSince > r.endedAt && !fail.distSince && !fail.regenReq && at.regenReq && mono()-at.regenReq < 15000) cluster.complete();
             store.log.unshift(entry);
             store.log.length = Math.min(store.log.length, 30);
             if (how === 'completed' && G.isNum(r.sootStart) && r.sootStart > 5) {
@@ -207,6 +221,8 @@ mgu.run({
                 lastDist = d.distSince;
                 if (store.lastDist !== Math.round(d.distSince)) { store.lastDist = Math.round(d.distSince); if (Math.round(d.distSince) % 5 === 0) save(); }
             }
+            const freshCluster = !d.demo && link.ready && link.available && !fail.regenReq && !!at.regenReq && mono()-at.regenReq < Math.min(15000,Math.max(6000,(settings.get('rate')||2)*3000));
+            try { cluster.update(d.regenReq, freshCluster, stationary()); } catch(e) { cluster.close(); log.warn('cluster notification: '+e); }
             if (mono() - lastTrace >= TRACE_S * 1000) {
                 lastTrace = mono();
                 trace.push([lastTrace, d.soot, d.tDpf, d.tOxi, d.dp, d.demo]);
