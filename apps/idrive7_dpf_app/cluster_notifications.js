@@ -4,7 +4,7 @@ const { Canvas } = require('./kit/canvas');
 const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client');
 const colors = { requested:'#ffbc42', running:'#49d8ef', completed:'#57ce82' };
 const labels = { requested:'Regeneration requested', running:'Regeneration in progress', completed:'Regeneration completed' };
-const Z = 10000; // high requested priority, renderer/car arbitration still applies
+const Z = 1000; // high requested priority, renderer/car arbitration still applies
 function frame(state, compact, test) {
     const w = compact ? 80 : 400, h = compact ? 80 : 90;
     const cv = new Canvas(w,h).clear();

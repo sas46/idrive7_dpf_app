@@ -1,3 +1,15 @@
+## v0.1.9
+
+- Fix rejected cluster overlay Z-order: 10000 -> 1000.
+- Add Z-order regression assertions.
+- In-car validation pending.
+
+## v0.1.9
+
+- Fix rejected cluster overlay Z-order: 10000 -> 1000.
+- Add Z-order regression assertions to mock and socket tests.
+- In-car validation pending.
+
 ## v0.1.8
 
 - Wait for Cluster Render handshake before creating the overlay.

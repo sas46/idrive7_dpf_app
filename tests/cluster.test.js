@@ -5,7 +5,7 @@ const {Notifications,frame}=require(path.resolve(process.argv[2], 'cluster_notif
 let now=100, opts={clusterEnabled:true,clusterRequested:true,clusterRunning:true,clusterCompleted:true,clusterDuration:5,clusterMode:'icon'}, last;
 class Mock extends E {connect(){this.ready=true;this.emit("ready");} close(){} drop(){} image(o){last=o;return 1;} pixels(r,d,p){assert.equal(p.length,last.w*last.h*4);return true;}}
 const n=new Notifications({get:k=>opts[k]},console,()=>now,()=>new Mock());
-n.update(6,true,false);assert.equal(last.w,400);assert.equal(last.exclusive,false);
+n.update(6,true,false);assert.equal(last.w,400);assert.equal(last.exclusive,false);assert.equal(last.z,1000);assert(Number.isFinite(last.z) && last.z>=-1000 && last.z<=1000);assert.equal(last.z,1000);assert(Number.isFinite(last.z) && last.z>=-1000 && last.z<=1000);
 now+=5001;n.update(6,true,false);assert.equal(last.w,80);
 n.update(4,true,false);assert.equal(last.w,400);n.update(4,false,false);assert.equal(n.cr,null);
 n.complete();n.update(0,true,false);assert.equal(last.w,400);now+=6000;n.update(0,true,false);assert.equal(n.cr,null);
