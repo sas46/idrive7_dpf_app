@@ -1,3 +1,16 @@
+## v0.1.11
+
+- Native OAP autostart and a default-on background monitoring switch.
+- Single diagnostic engine independent of RHMI; timeout backoff 10/20/60 seconds and automatic recovery.
+- Preserve v0.1.10 cluster positioning and read-only diagnostics.
+- Host tests passed; cold boot, foreground access and vehicle sleep require in-car validation.
+
+## v0.1.10
+
+- Lower cluster notifications and align bar and compact icon bottoms.
+- Center icon and label as a group using measured text width.
+- v0.1.9 overlay visibility confirmed in car; new placement confirmed in car.
+
 ## v0.1.9
 
 - Fix rejected cluster overlay Z-order: 10000 -> 1000.

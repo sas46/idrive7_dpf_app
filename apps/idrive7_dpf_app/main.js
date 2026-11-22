@@ -45,8 +45,12 @@ const TRACE_S = 2, TRACE_N = 900;  // a trace point every 2 s, 30 min
 const SPARK_N = 150;               // the history lines: the last 5 min
 
 mgu.run({
-    async start(ctx) {
-        const { ui, settings, log } = ctx;
+    async background(ctx) {
+        const { settings, log } = ctx;
+        let foreground = false;
+        const enabled = () => settings.get('backgroundMonitor') !== false || foreground;
+        const canRead = () => enabled() && settings.get('demo') !== 'on' && link.ready && link.available;
+        log.info('DPF background monitor initialized (automatic=' + (settings.get('backgroundMonitor') !== false) + ')');
         let coolant = null, coolantAt = 0;
         const cfg = Object.assign({ ecu: 18, history: [] }, (ctx.spec.config && ctx.spec.config.dpf) || {});
         const mono = () => { const h = process.hrtime(); return h[0] * 1000 + h[1] / 1e6; };   // steady clock (the wall clock jumps at start-up)
@@ -59,7 +63,6 @@ mgu.run({
             speedAt = mono();
         }}, log, {pollMs:2000}).catch(e=>log.warn('cluster speed: '+e));
         const stationary = () => speed === 0 && mono()-speedAt < 5000;
-        ctx.settingsRow({label:'Cluster Render status',value:()=>cluster.status()});
         settings.onChange((k,v) => { if(k==='clusterTest' && v) { settings.set(k,false); if(stationary()) cluster.test(); } });
         if(settings.get('clusterTest')) settings.set('clusterTest',false);
         process.on('exit',()=>cluster.close());
@@ -77,7 +80,7 @@ mgu.run({
 
         /* ---------- reading the engine unit ---------- */
         const link = new ReadOnlyDiag(ctx.signals, log);
-        link.init();                                   // in the background: the screen must not wait for it
+        link.init().catch(e => log.warn('diagnostic init: ' + e));                                   // in the background: the screen must not wait for it
         const rd = new DidReader(link, { ecu: cfg.ecu });
         const live = {}, at = {}, fail = {}, tryAt = {}, logged = {};
         let histOdo = [], histAt = 0, lastReal = 0;
@@ -93,11 +96,12 @@ mgu.run({
 
         async function readKey(k) {
             const list = cfg[k] || [];
-            if (!list.length) return;
+            if (!list.length || !canRead()) return;
             // a value the engine unit refused three times in a row is only asked again once a minute
             if ((fail[k] || 0) >= 3 && mono() - (tryAt[k] || 0) < 60000) return;
             tryAt[k] = mono();
             const v = await rd.value(k, list), c = list[rd.pick[k] || 0];
+            if (!enabled()) return;
             if (v === null) { fail[k] = (fail[k] || 0) + 1; logRaw(k, c, false); return; }
             fail[k] = 0; live[k] = v; at[k] = mono(); lastReal = mono();
             logRaw(k, c, true);
@@ -107,32 +111,81 @@ mgu.run({
         async function readHistory() {
             const out = [];
             for (const did of cfg.history || []) {
+                if (!canRead()) break;
+                const misses = link.stats.missed;
                 const v = await rd.value('hist' + did, [{ did, bytes: 4, factor: 0.001, min: 1, max: 2000000 }]);
+                if (!enabled()) return;
                 if (v !== null) out.push(v);
+                if (link.stats.missed > misses) break;
             }
             histAt = mono();
             if (out.length) histOdo = out;
         }
 
         let round = 0, pollTimer = null, wantHistory = true, wantSlow = false;
-        async function poll() {
-            round++;
-            try {
-                if (settings.get('demo') !== 'on' && link.ready && link.available) {
-                    const keys = round % 5 === 1 || wantSlow ? ALL : FAST;
-                    wantSlow = false;
-                    for (const k of keys) await readKey(k);
-                    if (wantHistory || mono() - histAt > 300000) { wantHistory = false; await readHistory(); }
-                }
-            } catch (e) { log.warn('engine unit poll: ' + e); }
-            pollTimer = setTimeout(poll, Math.max(1, settings.get('rate') || 2) * 1000);
+        let polling = false, offline = 0, paused = !enabled();
+        function schedule(ms) {
+            if (pollTimer !== null) clearTimeout(pollTimer);
+            pollTimer = setTimeout(poll, ms);
         }
-        pollTimer = setTimeout(poll, 1500);
+        async function poll() {
+            pollTimer = null;
+            if (polling) return;
+            polling = true;
+            try {
+                if (canRead()) {
+                    // A sleeping DDE gets a single probe, not an entire batch of timeouts.
+                    const misses = link.stats.missed;
+                    const replies = link.stats.replies;
+                    if (offline) {
+                        // Bypass the per-DID rejection cache for this one recovery probe.
+                        fail.regenReq = 0;
+                        await readKey('regenReq');
+                    } else {
+                        round++;
+                        const keys = round % 5 === 1 || wantSlow ? ALL : FAST;
+                        wantSlow = false;
+                        for (const k of keys) {
+                            if (!canRead()) break;
+                            await readKey(k);
+                            if (link.stats.missed > misses) break;
+                        }
+                        if (canRead() && link.stats.missed === misses && (wantHistory || mono() - histAt > 300000)) {
+                            wantHistory = false; await readHistory();
+                        }
+                    }
+                    if (link.stats.missed > misses && link.stats.replies === replies) {
+                        offline = Math.min(3, offline + 1);
+                    } else if (link.stats.replies > replies) {
+                        if (offline) { log.info('DDE communication restored'); wantSlow = true; wantHistory = true; }
+                        offline = 0;
+                    } else if (link.stats.missed > misses) offline = Math.max(1, offline);
+                }
+            } catch (e) { offline = Math.min(3, offline + 1); log.warn('engine unit poll: ' + e); }
+            finally {
+                polling = false;
+                schedule(!enabled() ? 1000 : offline ? [0,10000,20000,60000][offline] : Math.max(1, settings.get('rate') || 2) * 1000);
+            }
+        }
+        function refreshPolicy() {
+            const next = !enabled();
+            if (next === paused) return;
+            paused = next;
+            log.info('DPF monitor ' + (paused ? 'paused (background disabled)' : 'resumed'));
+            // Never interpret stale data as a regeneration end after a pause.
+            regen = null;
+            Object.keys(at).forEach(k => delete at[k]);
+            if (paused) { cluster.testUntil = 0; cluster.update(null, false, false); }
+            else { offline = 0; wantSlow = true; wantHistory = true; if (!polling) schedule(0); }
+        }
+        settings.onChange(k => { if (k === 'backgroundMonitor') refreshPolicy(); });
+        schedule(1500);
 
         /* ---------- demo (PC preview, emulator, bench unit) ---------- */
         let demo = null, demoVals = null;
         function demoOn() {
             const m = settings.get('demo');
+            if (!foreground && m !== 'on' && ctx.app) return false;
             if (m === 'on') return true;
             if (m === 'off') return false;
             // auto: after 8 s at start without one real reply, or 20 s without one later on
@@ -184,9 +237,15 @@ mgu.run({
             wantHistory = true;
         }
         function tick() {
+            if (!enabled()) { snap = data(); return; }
             if (demo) demoVals = demo.sample();
             const d = snap = data();
-            const active = d.regenReq === 4;
+            if (!d.demo && (!link.available || fail.regenReq || !G.isNum(d.regenReq))) {
+                if (regen && mono() - (at.regenReq || 0) > 60000) regen = null;
+                cluster.update(null, false, stationary());
+                return;
+            }
+            const active = d.regenReq === 4 && (d.demo || (!fail.regenReq && link.available));
             if (regen && regen.demo !== d.demo) regen = null;           // switched between demo and the car
             if (active && !regen) {
                 regen = { t0: mono(), date: Date.now(), sootStart: d.soot, peakT: d.tDpf, demo: d.demo };
@@ -200,7 +259,7 @@ mgu.run({
                 regen.endedAt = mono();
                 wantSlow = true;
             }
-            if (regen && regen.endedAt) {
+            if (regen && regen.endedAt && (d.demo || (link.available && !fail.regenReq && G.isNum(d.regenReq)))) {
                 const fresh = d.demo || (at.distSince && at.distSince > regen.endedAt);
                 if (fresh || mono() - regen.endedAt > 30000) {
                     const reset = G.isNum(d.distSince) && d.distSince < 2;
@@ -428,6 +487,16 @@ mgu.run({
             cv.text('No regeneration command is sent.',1010,450,22,P.dim);
         }
 
+        return { attach(view) {
+        const ctx = view, ui = view.ui;
+        const refreshForeground = () => {
+            foreground = ['MAIN','SETTINGS'].some(n => ui.isVisible(n) && (!ui.hasFocus || ui.hasFocus(n)));
+            refreshPolicy();
+        };
+        ui.onVisible(refreshForeground);
+        if (ui.onFocus) ui.onFocus(refreshForeground);
+        refreshForeground();
+        ctx.settingsRow({label:'Cluster Render status',value:()=>cluster.status()});
         const pages = () => settings.get('experimentalRegen') ? PAGES.concat('Regeneration') : PAGES;
         /* ---------- screen ---------- */
         let page = 0;
@@ -463,8 +532,13 @@ mgu.run({
         settings.onChange((k) => { if (k === 'sootMax' && demo) demo.thr = threshold(); if (k === 'demo') { regen = null; } if (k === 'experimentalRegen') { if (!settings.get(k) && page === 3) page = 0; } });
         // every screen refresh (60 fps) with the GPU renderer; 4 fps in software (PNG frames)
         ctx.loop('MAIN', 4, render);
-        tick();
+        snap = data();
         render().then(() => log.info('first frame done')).catch((e) => log.warn('first render: ' + e));
-        void pollTimer;
+        } };
+    },
+    async start(ctx) {
+        // PC tools use start directly; the real kit supplies the single background instance.
+        const engine = ctx.background || await this.background(ctx);
+        engine.attach(ctx);
     },
 });

@@ -5,11 +5,18 @@ const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client');
 const colors = { requested:'#ffbc42', running:'#49d8ef', completed:'#57ce82' };
 const labels = { requested:'Regeneration requested', running:'Regeneration in progress', completed:'Regeneration completed' };
 const Z = 1000; // high requested priority, renderer/car arbitration still applies
+const MAP_BOTTOM = 420; // map 1088x480: lower centre, approximately the previous KOMBI position
 function frame(state, compact, test) {
     const w = compact ? 80 : 400, h = compact ? 80 : 90;
     const cv = new Canvas(w,h).clear();
     cv.roundRect(0,0,w,h,12,[0,0,0,179]);
-    const c = colors[state], x = compact ? 15 : 20, y = compact ? 25 : 30;
+    const c = colors[state], y = compact ? 25 : 30;
+    const opts = {literal:true}; let size=26;
+    const iconWidth = state === 'requested' ? 55 : 52, gap = 16;
+    while(cv.textWidth(labels[state],size,opts)>w-40-iconWidth-gap && size>12 && !compact) size--;
+    const textWidth = cv.textWidth(labels[state],size,opts);
+    const x = compact ? 15 : Math.round((w-iconWidth-gap-textWidth)/2)+1;
+    const textX = x+iconWidth+gap-1;
     const pts = [[0,8],[8,8],[8,0],[42,0],[42,8],[50,8],[50,25],[42,25],[42,33],[8,33],[8,25],[0,25],[0,8]];
     cv.polyline(pts.map(p=>[p[0]+x,p[1]+y]),2,c);
     if(state === 'completed') cv.polyline([[x+15,y+16],[x+23,y+24],[x+36,y+10]],3,c);
@@ -19,10 +26,8 @@ function frame(state, compact, test) {
         cv.polyline([[x+43,y+23],[x+43,y+30],[x+48,y+33]],2,c);
     } else if(state === 'running') for(const a of [15,25,35]) cv.polyline([[x+a,y-4],[x+a-3,y-8],[x+a,y-13]],2,c);
     if(!compact) {
-        const opts = {literal:true}; let size=26;
-        while(cv.textWidth(labels[state],size,opts)>302 && size>12) size--;
-        cv.text(labels[state],88,test?44:54,size,c,opts);
-        if(test) cv.text('TEST',88,69,18,'#ffffff',opts);
+        cv.text(labels[state],textX,test?44:54,size,c,opts);
+        if(test) cv.text('TEST',textX+textWidth/2,69,18,'#ffffff',{literal:true,align:'center'});
     }
     return Buffer.from(cv.d);
 }
@@ -50,7 +55,7 @@ class Notifications {
             const rgba=frame(d.show,d.compact,d.test);
             if(this.ref) cr.drop(this.ref);
             this.ref=0; this.layerStatus='Creating overlay';
-            this.ref=cr.image({target:'panel',klass:'overlay',z:Z,exclusive:false,x:(1920-w)/2,y:520+(90-h)/2,w,h,iw:w,ih:h,visible:true});
+            this.ref=cr.image({target:'map',klass:'overlay',z:Z,exclusive:false,x:(1088-w)/2,y:MAP_BOTTOM-h,w,h,iw:w,ih:h,visible:true});
             this.report('image ref='+this.ref+' '+w+'x'+h+' '+d.key);
             if(!this.ref || !cr.pixels(this.ref,null,rgba)) throw new Error('image or pixels rejected locally');
             this.key=d.key; this.layerStatus='Overlay submitted'; this.report('pixels queued '+rgba.length+' bytes ref='+this.ref);
@@ -80,4 +85,4 @@ class Notifications {
         this.flush();
     }
 }
-module.exports={Notifications,frame,Z};
+module.exports={Notifications,frame,Z,MAP_BOTTOM};

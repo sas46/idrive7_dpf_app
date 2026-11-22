@@ -30,6 +30,7 @@ jobs:
           python tests/check_release.py "dist/idrive7_dpf_app@$VERSION.tgz"
           mkdir -p /tmp/dpf-release-test
           tar -xzf "dist/idrive7_dpf_app@$VERSION.tgz" -C /tmp/dpf-release-test
+          node tests/background.test.js /tmp/dpf-release-test/package/javascript
           node tests/cluster.test.js /tmp/dpf-release-test/package/javascript
           node tests/cluster-socket.test.js /tmp/dpf-release-test/package/javascript
       - name: Attach verified TGZ
