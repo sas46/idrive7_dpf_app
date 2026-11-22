@@ -34,7 +34,7 @@ function frame(state, compact, test) {
 class Notifications {
     constructor(settings,log,clock, factory) {
         this.s=settings; this.log=log; this.now=clock; this.factory=factory||(()=>new ClusterRender('sas46_dpf_monitor'));
-        this.state=null; this.since=0; this.doneUntil=0; this.testUntil=0; this.ref=0; this.key=''; this.cr=null; this.layerStatus='Idle'; this.desired=null; this.failedKey='';
+        this.state=null; this.since=0; this.doneUntil=0; this.testActive=false; this.ref=0; this.key=''; this.cr=null; this.layerStatus='Idle'; this.desired=null; this.failedKey='';
     }
     status() { return this.cr ? this.layerStatus : fs.existsSync(DEFAULT_PATH) ? 'Idle (no active notification)' : 'Renderer socket unavailable'; }
     report(msg, error) { const fn=error?this.log.warn:this.log.info; if(fn) fn.call(this.log,'cluster: '+msg); }
@@ -63,15 +63,15 @@ class Notifications {
     }
     duration() { return (Number(this.s.get('clusterDuration'))||5)*1000; }
     complete() { if(this.s.get('clusterEnabled') && this.s.get('clusterCompleted')) this.doneUntil=this.now()+this.duration(); }
-    test() { this.testUntil=this.now()+this.duration(); }
+    test(enabled) { this.testActive=!!enabled; }
     update(raw, fresh, stationary) {
         const now=this.now();
-        if(!this.s.get('clusterEnabled')) { this.close(); this.state=null; this.doneUntil=0; this.testUntil=0; return; }
+        if(!this.s.get('clusterEnabled')) { this.close(); this.state=null; this.doneUntil=0; return; }
         const state=fresh && raw===6?'requested':fresh && raw===4?'running':null;
         if(state!==this.state) { this.state=state; this.since=now; }
         if(!fresh || state) this.doneUntil=0;
-        if(!stationary) this.testUntil=0;
-        const test=this.testUntil>now;
+        // Explicit test remains available regardless of vehicle speed.
+        const test=this.testActive;
         let show=test?'requested':state || (this.doneUntil>now?'completed':null);
         if(!test && show && !this.s.get('cluster'+show[0].toUpperCase()+show.slice(1))) show=null;
         const mode=this.s.get('clusterMode');

@@ -56,15 +56,10 @@ mgu.run({
         const mono = () => { const h = process.hrtime(); return h[0] * 1000 + h[1] / 1e6; };   // steady clock (the wall clock jumps at start-up)
         const t0 = mono();
         const cluster = new Notifications(settings, log, mono);
-        let speed = null, speedAt = -Infinity;
-        ctx.signals.watch('de.bmw.infotainment.vehicle.Vehicle2', '1', {statusCarSpeed2: v => {
-            const n = v && v.speedVehicleCentreOfGravity;
-            speed = Number.isFinite(n) && n >= 0 && n < 65535 ? n * 0.015625 : null;
-            speedAt = mono();
-        }}, log, {pollMs:2000}).catch(e=>log.warn('cluster speed: '+e));
-        const stationary = () => speed === 0 && mono()-speedAt < 5000;
-        settings.onChange((k,v) => { if(k==='clusterTest' && v) { settings.set(k,false); if(stationary()) cluster.test(); } });
-        if(settings.get('clusterTest')) settings.set('clusterTest',false);
+        // Test notifications are user-triggered; do not gate them on vehicle speed.
+        const stationary = () => true;
+        settings.onChange((k,v) => { if(k==='clusterTest') { cluster.test(!!v); log.info('cluster: test '+(v?'enabled':'disabled')+' by user'); } });
+        cluster.test(settings.get('clusterTest') === true);
         process.on('exit',()=>cluster.close());
         ctx.signals.watch('de.bmw.infotainment.vehicle.CDS', '1', {statusEngineTemperature: (v) => {
             const raw = v.temperatureEngineDrive;
