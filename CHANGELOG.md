@@ -1,34 +1,7 @@
-## v0.1.11
-
-- Native OAP autostart and a default-on background monitoring switch.
-- Single diagnostic engine independent of RHMI; timeout backoff 10/20/60 seconds and automatic recovery.
-- Preserve v0.1.10 cluster positioning and read-only diagnostics.
-- Host tests passed; cold boot, foreground access and vehicle sleep require in-car validation.
-
-## v0.1.10
-
-- Lower cluster notifications and align bar and compact icon bottoms.
-- Center icon and label as a group using measured text width.
-- v0.1.9 overlay visibility confirmed in car; new placement confirmed in car.
-
-## v0.1.9
-
-- Fix rejected cluster overlay Z-order: 10000 -> 1000.
-- Add Z-order regression assertions.
-- In-car validation pending.
-
-## v0.1.9
-
-- Fix rejected cluster overlay Z-order: 10000 -> 1000.
-- Add Z-order regression assertions to mock and socket tests.
-- In-car validation pending.
-
-## v0.1.8
-
-- Wait for Cluster Render handshake before creating the overlay.
-- Log layer creation, pixel submission, refusal and layer state.
-- Test the actual client over a simulated Unix socket.
-- In-car validation pending.
+## 0.1.14
+- KOMBI map overlay explicitly contends for scene ownership independent of Waze.
+- Lower overlay placement and improved two-line test layout.
+- No modifications to Waze on Cluster or Cluster Render.
 
 # Changelog
 ## 0.1.7

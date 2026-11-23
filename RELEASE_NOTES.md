@@ -1,9 +1,12 @@
-# DPF Monitor v0.1.13 — KOMBI test toggle (pre-release)
+## What's Changed
+- Make DPF notifications actively contend for the KOMBI `map` target even when Waze is not running (`contend: true`).
+- Move the notification to the lower edge of the map area, keeping it horizontally centered.
+- Increase notification height and separate title from TEST indicator to prevent overlap.
+- Improve background opacity for legibility.
+- Preserve the persistent KOMBI test toggle, background monitoring, and native OAP autostart.
 
-- Replaced timed cluster notification test with a persistent ON/OFF toggle.
-- ON keeps the test overlay active; OFF removes it on the next update cycle.
-- Test can be activated at any vehicle speed; use only when safe, ideally by a passenger.
-- Normal regeneration notification duration and cluster MAP overlay behavior unchanged.
-- OAP native autostart and background monitoring behavior retained.
+## Validation
+- SDK-free package and local unit tests passed.
+- **In-vehicle validation required:** independent scene activation, BMW BC menu compatibility, placement and readability.
 
-**Validation:** Local syntax, packaging and state-transition tests only. Vehicle display, BC menu and background autostart require in-car verification.
+**Status:** Pre-release.

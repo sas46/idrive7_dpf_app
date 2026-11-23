@@ -5,14 +5,14 @@ const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client');
 const colors = { requested:'#ffbc42', running:'#49d8ef', completed:'#57ce82' };
 const labels = { requested:'Regeneration requested', running:'Regeneration in progress', completed:'Regeneration completed' };
 const Z = 1000; // high requested priority, renderer/car arbitration still applies
-const MAP_BOTTOM = 420; // map 1088x480: lower centre, approximately the previous KOMBI position
+const MAP_BOTTOM = 476; // 4 px above the bottom of the 1088x480 map target
 function frame(state, compact, test) {
-    const w = compact ? 80 : 400, h = compact ? 80 : 90;
+    const w = compact ? 80 : 460, h = compact ? 80 : 104;
     const cv = new Canvas(w,h).clear();
-    cv.roundRect(0,0,w,h,12,[0,0,0,179]);
-    const c = colors[state], y = compact ? 25 : 30;
+    cv.roundRect(0,0,w,h,12,[0,0,0,220]);
+    const c = colors[state], y = compact ? 25 : 21;
     const opts = {literal:true}; let size=26;
-    const iconWidth = state === 'requested' ? 55 : 52, gap = 16;
+    const iconWidth = state === 'requested' ? 55 : 52, gap = 12;
     while(cv.textWidth(labels[state],size,opts)>w-40-iconWidth-gap && size>12 && !compact) size--;
     const textWidth = cv.textWidth(labels[state],size,opts);
     const x = compact ? 15 : Math.round((w-iconWidth-gap-textWidth)/2)+1;
@@ -26,8 +26,8 @@ function frame(state, compact, test) {
         cv.polyline([[x+43,y+23],[x+43,y+30],[x+48,y+33]],2,c);
     } else if(state === 'running') for(const a of [15,25,35]) cv.polyline([[x+a,y-4],[x+a-3,y-8],[x+a,y-13]],2,c);
     if(!compact) {
-        cv.text(labels[state],textX,test?44:54,size,c,opts);
-        if(test) cv.text('TEST',textX+textWidth/2,69,18,'#ffffff',{literal:true,align:'center'});
+        cv.text(labels[state],textX,45,size,c,opts);
+        if(test) cv.text('TEST',textX+textWidth/2,85,18,'#ffffff',{literal:true,align:'center'});
     }
     return Buffer.from(cv.d);
 }
@@ -51,12 +51,12 @@ class Notifications {
         const cr=this.cr,d=this.desired;
         if(!cr || !cr.ready || !d || d.key===this.key || d.key===this.failedKey) return;
         try {
-            const w=d.compact?80:400,h=d.compact?80:90;
+            const w=d.compact?80:460,h=d.compact?80:104;
             const rgba=frame(d.show,d.compact,d.test);
             if(this.ref) cr.drop(this.ref);
             this.ref=0; this.layerStatus='Creating overlay';
-            this.ref=cr.image({target:'map',klass:'overlay',z:Z,exclusive:false,x:(1088-w)/2,y:MAP_BOTTOM-h,w,h,iw:w,ih:h,visible:true});
-            this.report('image ref='+this.ref+' '+w+'x'+h+' '+d.key);
+            this.ref=cr.image({target:'map',klass:'overlay',z:Z,exclusive:false,contend:true,x:(1088-w)/2,y:MAP_BOTTOM-h,w,h,iw:w,ih:h,visible:true});
+            this.report('image ref='+this.ref+' '+w+'x'+h+' '+d.key+' target=map contend=true y='+(MAP_BOTTOM-h));
             if(!this.ref || !cr.pixels(this.ref,null,rgba)) throw new Error('image or pixels rejected locally');
             this.key=d.key; this.layerStatus='Overlay submitted'; this.report('pixels queued '+rgba.length+' bytes ref='+this.ref);
         } catch(e) { this.failedKey=d.key; this.layerStatus='Overlay error: '+e.message; this.report(String(e.stack||e),true); if(this.ref) cr.drop(this.ref); this.ref=0; }
