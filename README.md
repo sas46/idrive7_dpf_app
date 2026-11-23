@@ -53,13 +53,12 @@ The preview uses simulated data. The diagnostic test checks the read-only interf
 
 ## WIP and experimental page and limitations
 
-Enable the regeneration page in Settings > Experimental. It displays coolant temperature, exhaust temperature before the DPF, distance since last regeneration and regeneration lock status. Reference thresholds and lock-state interpretation remain unverified across DDE variants. They must not be treated as authorization to regenerate.
+Enable the regeneration page in Settings > Experimental. It displays coolant temperature, exhaust temperature before the DPF, distance since last regeneration and regeneration lock status. Reference thresholds and lock-state interpretation remain unverified across DDE variants.
 
 The observed DID 44BB mapping on the test vehicle is 4 = running and 6 = requested. Other variants may differ. Missing or incorrect readings should be reported with the vehicle model, engine and software version, without VIN or private diagnostic information.
 
-**Use at your own risk. Forcing a regen is not recommended.** This version does not initiate regeneration, change diagnostic sessions or write to the DDE. Do not interact with the app while driving. It is not a substitute for professional diagnostics. Not affiliated with BMW.
+**Forcing a regen is not recommended.** This version does not initiate regeneration, it will be implemented with v0.2.0
 
-I'm looking forward to implement a rendering for the Kombi (using its renderer) to notify the users about a requested/actual regeneration.
 
 ## Credits and licensing
 
