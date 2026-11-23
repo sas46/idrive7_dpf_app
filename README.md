@@ -37,7 +37,7 @@ Requires the Idrive unit to be rooted and [mgu-store](https://github.com/robertn
 sas46/idrive7_dpf_app
 ```
 
-The repository includes `mgu-repo.json` for source builds. The online repository installation has not yet been tested. The BMW OAP SDK is not distributed here.
+The repository includes `mgu-repo.json` for source builds. The BMW OAP SDK is not distributed here.
 
 ## Local development (Windows)
 
