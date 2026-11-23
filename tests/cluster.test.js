@@ -11,6 +11,6 @@ n.update(4,true,false);assert.equal(last.w,400);n.update(4,false,false);assert.e
 n.complete();n.update(0,true,false);assert.equal(last.w,400);now+=6000;n.update(0,true,false);assert.equal(n.cr,null);
 opts.clusterMode='temporary';n.update(6,true,false);now+=6000;n.update(6,true,false);assert.equal(n.cr,null);
 opts.clusterMode='bar';n.update(4,true,false);now+=6000;n.update(4,true,false);assert.equal(last.w,400);opts.clusterEnabled=false;n.update(4,true,false);assert.equal(n.cr,null);
-opts.clusterEnabled=true;n.test();n.update(0,false,false);assert.equal(last.w,400);n.test();n.update(0,false,true);assert.equal(last.w,400);
+opts.clusterEnabled=true;n.test(true);n.update(0,false,false);assert.equal(last.w,400);assert.equal(n.testActive,true);n.test(false);n.update(0,false,true);assert.equal(n.testActive,false);assert.equal(n.cr,null);
 assert.equal(frame('requested',true,false)[(40*80+5)*4+3],179);
 console.log('cluster notifications: OK');
