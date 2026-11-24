@@ -11,9 +11,10 @@ A standalone app for monitoring DPF conditions directly on the iDrive display. D
 - Overview with soot load and regeneration status.
 - Live Data with recent trends and optional raw diagnostic replies.
 - Regeneration history and demo mode.
-- GPU rendering through the iDrive 7 Kit.
+- Automatically starts with MGU in background (can be disabled in settings).
 - Regeneration notifications on Kombi (it needs [cluter-renderer](https://github.com/robertnisipeanu/idrive-apps/tree/main/native/cluster-render) from MGU Store)
-- Optional experimental Regeneration page, disabled by default. Its action button is a non-functional placeholder a the moment; no regeneration request is sent.
+- GPU rendering through the iDrive 7 Kit.
+- Optional experimental Regeneration page, disabled by default. Its action button is a non-functional placeholder a the moment; no regeneration request is sent. Will be implemented in v0.2.0
 
 ## Screenshots
 
