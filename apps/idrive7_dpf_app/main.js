@@ -25,6 +25,7 @@ const { DidReader } = require('./kit/dids');
 const { DemoDpf } = require('./demo');
 const ID7 = require('./id7');
 const { Notifications } = require('./cluster_notifications');
+const { regenerationState } = require('./regeneration-status');
 const { drawDpf } = require('./illustration');
 
 const W = 1600, H = 520;
@@ -110,11 +111,11 @@ mgu.run({
                 const misses = link.stats.missed;
                 const v = await rd.value('hist' + did, [{ did, bytes: 4, factor: 0.001, min: 1, max: 2000000 }]);
                 if (!enabled()) return;
-                if (v !== null) out.push(v);
+                out.push(v);
                 if (link.stats.missed > misses) break;
             }
             histAt = mono();
-            if (out.length) histOdo = out;
+            if (out.some(G.isNum)) histOdo = out;
         }
 
         let round = 0, pollTimer = null, wantHistory = true, wantSlow = false;
@@ -240,7 +241,8 @@ mgu.run({
                 cluster.update(null, false, stationary());
                 return;
             }
-            const active = d.regenReq === 4 && (d.demo || (!fail.regenReq && link.available));
+            const state = regenerationState(d.regenReq);
+            const active = state === 'running' && (d.demo || (!fail.regenReq && link.available));
             if (regen && regen.demo !== d.demo) regen = null;           // switched between demo and the car
             if (active && !regen) {
                 regen = { t0: mono(), date: Date.now(), sootStart: d.soot, peakT: d.tDpf, demo: d.demo };
@@ -249,7 +251,7 @@ mgu.run({
                 delete regen.endedAt;                                   // (the request came back: the same one goes on)
                 if (G.isNum(d.tDpf)) regen.peakT = Math.max(regen.peakT || 0, d.tDpf);
                 if (!G.isNum(regen.sootStart) && G.isNum(d.soot)) regen.sootStart = d.soot;
-            } else if (regen && !regen.endedAt && G.isNum(d.regenReq)) {
+            } else if (regen && !regen.endedAt && (state === 'idle' || state === 'requested')) {
                 // ended: completed or interrupted is decided on a distance read after the end (it is a slow value)
                 regen.endedAt = mono();
                 wantSlow = true;
@@ -346,8 +348,8 @@ mgu.run({
             if (running()) {
                 title = 'Regeneration running'; dot = P.heat;
                 sub = 'For ' + dur((mono() - regen.t0) / 1000) + ' min  -  please keep the engine running';
-            } else if (d.regenReq === 6) { title = 'Regeneration requested'; dot = P.warn; sub = 'Waiting for regeneration conditions'; }
-            else if (G.isNum(d.regenReq) && d.regenReq !== 0 && d.regenReq !== 4) { title = 'Regeneration status unknown'; sub = 'DID 44BB: ' + d.regenReq; }
+            } else if (regenerationState(d.regenReq) === 'requested') { title = 'Regeneration requested'; dot = P.warn; sub = 'Waiting for regeneration conditions'; }
+            else if (G.isNum(d.regenReq) && !regenerationState(d.regenReq)) { title = 'Regeneration status unknown'; sub = 'DID 44BB: ' + d.regenReq; }
             else if (!G.isNum(d.soot)) { title = 'No data'; sub = why('soot'); }
             else if (d.soot >= thr * 0.9) { title = 'Regeneration due'; dot = P.warn; sub = 'A longer drive at a steady speed helps the filter to clean itself'; }
             else {
@@ -382,7 +384,8 @@ mgu.run({
                 ['Engine time since regeneration', G.isNum(d.timeSince) ? (d.timeSince / 3600).toFixed(1) + ' h' : '--'],
                 ['Average interval', num(d.avgInterval, 0, 'km')],
                 ['Flow resistance', num(d.flowRes, 4)],
-                ['Regeneration request', num(d.regenReq, 0)],
+                ['Regeneration status', { idle: 'Inactive', requested: 'Requested', running: 'Running' }[regenerationState(d.regenReq)]
+                    || (G.isNum(d.regenReq) ? 'Unknown (' + d.regenReq + ')' : '--')],
                 ['Interruption status', num(d.interrupted, 0)],
                 ['Lock status', num(d.lock, 0)],
             ];
@@ -428,7 +431,11 @@ mgu.run({
             cv.text('Engine unit memory', 980, 72, 22, P.dim);
             const h = d.history || [];
             const bars = [];
-            for (let i = Math.min(h.length - 1, 4) - 1; i >= 0; i--) bars.push({ km: h[i] - h[i + 1], at: h[i] });
+            for (let i = Math.min(h.length - 1, 4) - 1; i >= 0; i--) {
+                if (G.isNum(h[i]) && G.isNum(h[i + 1]) && h[i] > h[i + 1]) {
+                    bars.push({ km: h[i] - h[i + 1], label: i === 0 ? 'Last' : '#' + (i + 1) });
+                }
+            }
             if (G.isNum(d.distSince)) bars.push({ km: d.distSince, now: true });
             const avg = d.avgInterval;
             const top = Math.max(100, ...bars.map((b) => b.km), G.isNum(avg) ? avg : 0) * 1.15;
@@ -442,18 +449,18 @@ mgu.run({
                     cv.fillRect(cx - w / 2 + 2, base - hh + 2, w - 4, hh - 2, withAlpha(P.accent, 0.18));
                 } else cv.card(cx - w / 2, base - hh, w, hh, 2, [[0, P.silver[0]], [1, P.silver[3]]]);
                 cv.text(thousands(b.km), cx, base - hh - 12, 22, P.text, { align: 'center' });
-                cv.text(b.now ? 'Now' : thousands(b.at), cx, base + 30, 18, P.dim, { align: 'center' });
+                cv.text(b.now ? 'Now' : b.label, cx, base + 30, 18, P.dim, { align: 'center' });
             });
             if (G.isNum(avg) && bars.length) {
                 const ay = base - (avg / top) * bh;
                 for (let k = bx; k < bx + bw; k += 18) cv.fillRect(k, ay, 10, 2, P.accent);
                 cv.text('Average ' + thousands(avg) + ' km', bx + bw, ay - 10, 18, P.accent, { align: 'right' });
             }
-            ID7.row(cv, P, 970, 410, 590, 44, 'Interval in km, odometer at its end', null, { size: 18 });
+            ID7.row(cv, P, 970, 410, 590, 44, 'Distance between regenerations (km)', null, { size: 18 });
             ID7.row(cv, P, 970, 454, 590, 44, 'Oil ash in the filter', num(d.ash, 1, 'g'), { size: 21 });
         }
 
-        function drawRegeneration(cv, P, d) {
+        function drawRegeneration(cv, P, d, confirmation, onForce) {
             cv.text('Current conditions / reference requirements', 40, 65, 25, P.text);
             const temp = v => num(T(v), 0, tU());
             const refTemp = v => 'Reference: > ' + Math.round(T(v)) + ' ' + tU();
@@ -473,19 +480,23 @@ mgu.run({
             cv.text('Reference values only; DDE-specific conditions unverified.',40,485,20,P.dim);
             cv.fillRect(975,52,1,440,P.line);
             cv.text('Experimental',1010,85,25,P.warn);
-            cv.text('Use at your own risk.',1010,145,30,P.warn);
-            cv.text('Forcing a regen is not recommended.',1010,190,24,P.text);
+            cv.text('FORCING REGEN IS NOT RECOMMENDED',1010,190,24,P.text);
             cv.text('Incorrect use may damage the DPF or engine.',1010,230,22,P.dim);
-            cv.text('Driving regeneration request only.',1010,275,22,P.dim);
-            cv.roundRect(1010,330,535,78,8,P.line);
-            cv.text('Work in progress',1277,380,27,P.dim,{align:'center'});
-            cv.text('No regeneration command is sent.',1010,450,22,P.dim);
+            cv.roundRect(1010,330,535,78,8,'#861546');
+            cv.text(confirmation === 'armed' ? 'ARE YOU REALLY SURE?' : 'FORCE REGEN',
+                1277,380,27,'#ffffff',{align:'center'});
+            if (cv.own) cv.target(1010,330,535,78,onForce,'force-regen');
+            cv.text(confirmation === 'unavailable' ? 'DDE command unverified. Nothing sent.' :
+                'Preview only. DDE command unavailable.',1010,450,22,P.dim);
         }
 
         return { attach(view) {
         const ctx = view, ui = view.ui;
+        let forceConfirmUntil = 0, forceUnavailable = false;
+        const resetForce = () => { forceConfirmUntil = 0; forceUnavailable = false; };
         const refreshForeground = () => {
             foreground = ['MAIN','SETTINGS'].some(n => ui.isVisible(n) && (!ui.hasFocus || ui.hasFocus(n)));
+            if (!foreground) resetForce();
             refreshPolicy();
         };
         ui.onVisible(refreshForeground);
@@ -499,10 +510,26 @@ mgu.run({
             const P = ID7.palette(settings.get('accent')), d = snap;
             const cv = ctx.canvas(W, H).clear(P.bg);
             if (page >= pages().length) page = 0;
-            [drawOverview, drawLive, drawHistory, drawRegeneration][page](cv, P, d);
+            if (page === 3) {
+                const confirmation = forceConfirmUntil > mono() ? 'armed' : forceUnavailable ? 'unavailable' : '';
+                drawRegeneration(cv, P, d, confirmation, () => {
+                    if (page !== 3 || !settings.get('experimentalRegen')) return;
+                    if (forceConfirmUntil > mono()) {
+                        forceConfirmUntil = 0;
+                        forceUnavailable = true;
+                    } else {
+                        forceUnavailable = false;
+                        forceConfirmUntil = mono() + 10000;
+                    }
+                    return render();
+                });
+            } else {
+                resetForce();
+                [drawOverview, drawLive, drawHistory][page](cv, P, d);
+            }
             if (cv.chrome) {
                 // full-screen layout: the kit's header with the pages as tabs
-                G.frame(cv, P, pages(), page, [d.demo && { text: 'DEMO' }, running() && { text: 'REGENERATING', color: P.heat }, d.regenReq === 6 && { text: 'REQUESTED', color: P.warn }]);
+                G.frame(cv, P, pages(), page, [d.demo && { text: 'DEMO' }, running() && { text: 'REGENERATING', color: P.heat }, regenerationState(d.regenReq) === 'requested' && { text: 'REQUESTED', color: P.warn }]);
             } else {
                 // iDrive layout: the HMI's title is over the page; the badges go top right of the page
                 // (a running regeneration: Overview says so in its status, the other pages here)

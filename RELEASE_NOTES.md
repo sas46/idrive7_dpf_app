@@ -1,6 +1,8 @@
-# DPF Monitor 0.1.15
+# DPF Monitor v0.1.16
 
-- Updated the Overview DPF cutaway with a metallic housing, a textured ceramic core, and sensor callouts.
-- The ceramic shows soot deposits and exhaust heat simultaneously. The core warms above 300 °C and glows orange near 600 °C.
-- KOMBI now defaults to **Temporary notification only** for **20 seconds**. Existing modes and durations remain selectable.
-- **Regeneration running** is shown in orange (`#FC9D03`).
+- Recognize both observed DDE encodings of DID `44BB`. Values `1` and `6` mean **Regeneration requested**, and `2` and `4` mean **Regeneration running**. The mapping also applies to KOMBI notifications.
+- Show readable regeneration states in Live Data and retain the original DDE value in Raw view.
+- Show distances between regenerations in History and skip intervals with missing or out-of-order readings.
+- Add an experimental two-step **FORCE REGEN** preview. It sends no command to the DDE.
+
+The SDK-free package was verified and all four local tests passed. On-vehicle validation on the reported G21 320d is pending.

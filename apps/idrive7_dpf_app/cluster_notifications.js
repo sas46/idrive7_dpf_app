@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('fs');
+const { regenerationState } = require('./regeneration-status');
 const { Canvas } = require('./kit/canvas');
 const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client');
 const colors = { requested:'#ffbc42', running:'#FC9D03', completed:'#57ce82' };
@@ -67,7 +68,8 @@ class Notifications {
     update(raw, fresh, stationary) {
         const now=this.now();
         if(!this.s.get('clusterEnabled')) { this.close(); this.state=null; this.doneUntil=0; return; }
-        const state=fresh && raw===6?'requested':fresh && raw===4?'running':null;
+        const decoded = fresh ? regenerationState(raw) : null;
+        const state = decoded === 'idle' ? null : decoded;
         if(state!==this.state) { this.state=state; this.since=now; }
         if(!fresh || state) this.doneUntil=0;
         // Explicit test remains available regardless of vehicle speed.
