@@ -1,7 +1,10 @@
 'use strict';
 const assert=require('assert'),net=require('net'),fs=require('fs'),os=require('os'),path=require('path');
 const root=process.argv[2], {Notifications}=require(path.resolve(root,'cluster_notifications.js')), {ClusterRender}=require(path.resolve(root,'cluster_render_client.js'));
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dpf-')), sock=path.join(dir,'s');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dpf-'));
+const sock=process.platform==='win32'
+    ? '\\\\.\\pipe\\dpf-test-'+path.basename(dir)
+    : path.join(dir,'s');
 let n, peer, received=[], frames=0, phase=0;
 const timeout=setTimeout(()=>{console.error('socket test timeout');process.exit(1);},6000);
 function event(e){const b=Buffer.from(JSON.stringify(e)), h=Buffer.alloc(5);h.writeUInt32LE(b.length+1);h[4]=74;peer.write(Buffer.concat([h,b]));}

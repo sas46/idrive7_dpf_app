@@ -2,8 +2,8 @@
 const fs = require('fs');
 const { Canvas } = require('./kit/canvas');
 const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client');
-const colors = { requested:'#ffbc42', running:'#49d8ef', completed:'#57ce82' };
-const labels = { requested:'Regeneration requested', running:'Regeneration in progress', completed:'Regeneration completed' };
+const colors = { requested:'#ffbc42', running:'#FC9D03', completed:'#57ce82' };
+const labels = { requested:'Regeneration requested', running:'Regeneration running', completed:'Regeneration completed' };
 const Z = 1000; // high requested priority, renderer/car arbitration still applies
 const MAP_BOTTOM = 476; // 4 px above the bottom of the 1088x480 map target
 function frame(state, compact, test) {
@@ -61,7 +61,7 @@ class Notifications {
             this.key=d.key; this.layerStatus='Overlay submitted'; this.report('pixels queued '+rgba.length+' bytes ref='+this.ref);
         } catch(e) { this.failedKey=d.key; this.layerStatus='Overlay error: '+e.message; this.report(String(e.stack||e),true); if(this.ref) cr.drop(this.ref); this.ref=0; }
     }
-    duration() { return (Number(this.s.get('clusterDuration'))||5)*1000; }
+    duration() { return (Number(this.s.get('clusterDuration'))||20)*1000; }
     complete() { if(this.s.get('clusterEnabled') && this.s.get('clusterCompleted')) this.doneUntil=this.now()+this.duration(); }
     test(enabled) { this.testActive=!!enabled; }
     update(raw, fresh, stationary) {

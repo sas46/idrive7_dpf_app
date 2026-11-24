@@ -357,7 +357,7 @@ mgu.run({
             }
             let tx = 846;
             if (dot) { cv.circle(856, 440, 8 + (running() ? 2 * Math.sin(Date.now() / 300) : 0), withAlpha(dot, 0.3)); cv.circle(856, 440, 6, dot); tx = 876; }
-            cv.text(title, tx, 450, 28, P.text);
+            cv.text(title, tx, 450, 28, running() ? '#FC9D03' : P.text);
             cv.text(sub, 846, 488, 21, P.dim);
         }
 
@@ -509,7 +509,7 @@ mgu.run({
                 let xr = 1560;
                 if (running() && page !== 0) {
                     const s = 'Regeneration running  ' + dur((mono() - regen.t0) / 1000);
-                    cv.text(s, xr, 30, 20, P.heat, { align: 'right' });
+                    cv.text(s, xr, 30, 20, '#FC9D03', { align: 'right' });
                     xr -= cv.textWidth(s, 20) + 18;
                     cv.circle(xr, 23, 5, P.heat);
                     xr -= 22;

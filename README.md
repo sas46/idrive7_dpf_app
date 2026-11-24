@@ -18,7 +18,7 @@ A standalone app for monitoring DPF conditions directly on the iDrive display. D
 ## Screenshots
 
 ### Overview
-![Overview](screenshots/overview.png)
+![Overview](screenshots/overview.gif)
 
 ### Live Data
 ![Live Data](screenshots/live_data.png)
